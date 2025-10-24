@@ -37,6 +37,11 @@ const io = new Server(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.json({ message: "Server Started", Status: 200 });
+});
+
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -89,10 +94,6 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/feedback", feedbackRoutes);
-
-app.get("/", (req, res) => {
-  res.json({ message: "Server Started", Status: 200 });
-});
 
 // Health check
 app.get("/api/health", (req, res) => {
