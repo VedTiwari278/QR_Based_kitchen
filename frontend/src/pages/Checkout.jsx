@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
-import { useCart } from '../contexts/CartContext';
-import { useAuth } from '../contexts/AuthContext';
-import { CreditCard, Smartphone, Banknote } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
+import { useCart } from "../contexts/CartContext";
+import { useAuth } from "../contexts/AuthContext";
+import { CreditCard, Smartphone, Banknote } from "lucide-react";
+import axios from "axios";
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { cartItems, getCartTotal, clearCart } = useCart();
   const { user, isAuthenticated } = useAuth();
-  
+
   const [loading, setLoading] = useState(false);
   const [orderData, setOrderData] = useState({
-    paymentMethod: 'upi',
-    orderType: 'pickup',
-    tableNumber: '',
+    paymentMethod: "upi",
+    orderType: "pickup",
+    tableNumber: "",
     guestInfo: {
-      name: user?.name || '',
-      phone: user?.phone || '',
-      email: user?.email || ''
-    }
+      name: user?.name || "",
+      phone: user?.phone || "",
+      email: user?.email || "",
+    },
   });
 
   const subtotal = getCartTotal();
@@ -30,24 +30,24 @@ const Checkout = () => {
   // Use useEffect for navigation when cart is empty
   useEffect(() => {
     if (cartItems.length === 0) {
-      navigate('/cart');
+      navigate("/cart");
     }
   }, [cartItems.length, navigate]);
 
   const handleInputChange = (field, value) => {
-    if (field.startsWith('guestInfo.')) {
-      const guestField = field.split('.')[1];
-      setOrderData(prev => ({
+    if (field.startsWith("guestInfo.")) {
+      const guestField = field.split(".")[1];
+      setOrderData((prev) => ({
         ...prev,
         guestInfo: {
           ...prev.guestInfo,
-          [guestField]: value
-        }
+          [guestField]: value,
+        },
       }));
     } else {
-      setOrderData(prev => ({
+      setOrderData((prev) => ({
         ...prev,
-        [field]: value
+        [field]: value,
       }));
     }
   };
@@ -55,50 +55,50 @@ const Checkout = () => {
   const validateForm = () => {
     if (!isAuthenticated) {
       if (!orderData.guestInfo.name.trim()) {
-        toast.error('Please enter your name');
+        toast.error("Please enter your name");
         return false;
       }
       if (!orderData.guestInfo.phone.trim()) {
-        toast.error('Please enter your phone number');
+        toast.error("Please enter your phone number");
         return false;
       }
     }
-    
-    if (orderData.orderType === 'dine-in' && !orderData.tableNumber.trim()) {
-      toast.error('Please enter table number');
+
+    if (orderData.orderType === "dine-in" && !orderData.tableNumber.trim()) {
+      toast.error("Please enter table number");
       return false;
     }
-    
+
     return true;
   };
 
   const handlePlaceOrder = async () => {
     if (!validateForm()) return;
-    
+
     setLoading(true);
 
     try {
-      const items = cartItems.map(cartItem => {
+      const items = cartItems.map((cartItem) => {
         const itemTotal = cartItem.price * cartItem.quantity;
-        
+
         const itemData = {
           item: cartItem.item._id,
           name: cartItem.item.name,
           quantity: cartItem.quantity,
           customizations: cartItem.customizations || {},
           price: cartItem.price,
-          itemTotal: itemTotal 
+          itemTotal: itemTotal,
         };
 
         if (!itemData.item || !itemData.quantity || !itemData.price) {
           throw new Error(`Invalid cart item: ${JSON.stringify(itemData)}`);
         }
 
-        console.log('📦 Prepared order item:', itemData);
+        console.log("📦 Prepared order item:", itemData);
         return itemData;
       });
 
-      console.log('✅ Prepared order items:', items);
+      console.log("✅ Prepared order items:", items);
 
       const subtotal = items.reduce((total, item) => total + item.itemTotal, 0);
       const tax = subtotal * 0.05;
@@ -111,7 +111,7 @@ const Checkout = () => {
         tableNumber: orderData.tableNumber,
         totalAmount: total,
         subtotal: subtotal,
-        tax: tax
+        tax: tax,
       };
 
       // Add user/guest info
@@ -123,27 +123,24 @@ const Checkout = () => {
           _id: user._id,
           name: user.name,
           email: user.email,
-          phone: user.phone
+          phone: user.phone,
         };
       }
 
-      console.log('📤 Sending order payload:', orderPayload);
+      console.log("📤 Sending order payload:", orderPayload);
 
-      if (orderData.paymentMethod === 'upi')
-      {
+      if (orderData.paymentMethod === "upi") {
         await handleRazorpayPayment(orderPayload);
       }
-      if (orderData.paymentMethod === 'cash') {
+      if (orderData.paymentMethod === "cash") {
         // FIXED: Moved the success navigation inside the function
-        toast.success('Order placed successfully! Pay at the counter.');
+        toast.success("Order placed successfully! Pay at the counter.");
         clearCart();
         navigate(`/track/${order.orderNumber}`);
       }
 
-
-
       // Create order
-      // const response = await axios.post('http://localhost:5000/api/orders', orderPayload);
+      // const response = await axios.post('https://qr-based-kitchen.vercel.app/api/orders', orderPayload);
       // const order = response.data;
 
       // console.log('🎉 Order created successfully:', order);
@@ -157,16 +154,15 @@ const Checkout = () => {
       //   clearCart();
       //   navigate(`/track/${order.orderNumber}`);
       // }
-
     } catch (error) {
-      console.error('❌ Error placing order:', error);
-      
+      console.error("❌ Error placing order:", error);
+
       // if (error.response) {
       //   console.error('📡 Server response:', error.response.data);
-        
+
       //   const serverError = error.response.data;
       //   let errorMessage = 'Failed to place order. ';
-        
+
       //   if (serverError.message) {
       //     errorMessage += serverError.message;
       //   }
@@ -176,8 +172,8 @@ const Checkout = () => {
       //   if (serverError.details) {
       //     errorMessage += ` Details: ${JSON.stringify(serverError.details)}`;
       //   }
-        
-        toast.error(errorMessage);
+
+      toast.error(errorMessage);
       // } else if (error.request) {
       //   console.error('🌐 No response received:', error.request);
       //   toast.error('No response from server. Please check your connection.');
@@ -221,9 +217,12 @@ const Checkout = () => {
         return;
       }
 
-      const { data: razorpayOrder} = await axios.post(`http://localhost:5000/api/orders`, {
-        orderDetails:orderPayload,
-      });
+      const { data: razorpayOrder } = await axios.post(
+        `https://qr-based-kitchen.vercel.app/api/orders`,
+        {
+          orderDetails: orderPayload,
+        }
+      );
 
       if (!razorpayOrder?.id) {
         alert("Payment initialization failed.");
@@ -245,17 +244,20 @@ const Checkout = () => {
             return;
           }
           try {
-            const verifyResp = await axios.post(`http://localhost:5000/api/orders/verify`, {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              orderDetails: orderPayload,
-            });
+            const verifyResp = await axios.post(
+              `https://qr-based-kitchen.vercel.app/api/orders/verify`,
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                orderDetails: orderPayload,
+              }
+            );
 
             if (verifyResp.data.success) {
-             toast.success('Payment successful!');
-             clearCart();
-             navigate(`/track/${verifyResp.data.order?.orderNumber}`);
+              toast.success("Payment successful!");
+              clearCart();
+              navigate(`/track/${verifyResp.data.order?.orderNumber}`);
             } else {
               toast("Payment verification failed.");
             }
@@ -266,9 +268,9 @@ const Checkout = () => {
           }
         },
         prefill: {
-          name: orderData.guestInfo.name || user?.name || '',
-          email: orderData.guestInfo.email || user?.email || '',
-          contact: orderData.guestInfo.phone || user?.phone || '',
+          name: orderData.guestInfo.name || user?.name || "",
+          email: orderData.guestInfo.email || user?.email || "",
+          contact: orderData.guestInfo.phone || user?.phone || "",
         },
         theme: { color: "#ff9800" },
         modal: {
@@ -290,45 +292,50 @@ const Checkout = () => {
   const handleUPIPayment = async (order) => {
     try {
       // Create fake payment order
-      const paymentResponse = await axios.post('http://localhost:5000/api/payment/create-order', {
-        amount: total,
-        orderId: order._id
-      });
+      const paymentResponse = await axios.post(
+        "https://qr-based-kitchen.vercel.app/api/payment/create-order",
+        {
+          amount: total,
+          orderId: order._id,
+        }
+      );
 
-      console.log('Payment order created:', paymentResponse.data);
+      console.log("Payment order created:", paymentResponse.data);
 
       // Simulate UPI payment process
-      toast.loading('Processing UPI payment...');
-      
+      toast.loading("Processing UPI payment...");
+
       // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Verify payment - this will always succeed in fake mode
-      const verifyResponse = await axios.post('http://localhost:5000/api/payment/verify', {
-        razorpay_order_id: paymentResponse.data.id,
-        razorpay_payment_id: `fake_pay_${Date.now()}`,
-        razorpay_signature: 'fake_signature',
-        orderId: order._id
-      });
+      const verifyResponse = await axios.post(
+        "https://qr-based-kitchen.vercel.app/api/payment/verify",
+        {
+          razorpay_order_id: paymentResponse.data.id,
+          razorpay_payment_id: `fake_pay_${Date.now()}`,
+          razorpay_signature: "fake_signature",
+          orderId: order._id,
+        }
+      );
 
-      console.log('Payment verification:', verifyResponse.data);
+      console.log("Payment verification:", verifyResponse.data);
 
       if (verifyResponse.data.success) {
         toast.dismiss();
         // FIXED: Moved the success navigation inside the function
-        toast.success('Payment successful! Order confirmed.');
+        toast.success("Payment successful! Order confirmed.");
         clearCart();
         navigate(`/track/${order.orderNumber}`);
       } else {
         toast.dismiss();
-        toast.error('Payment failed. Please try again.');
+        toast.error("Payment failed. Please try again.");
       }
-
     } catch (error) {
-      console.error('Payment error:', error);
-      console.error('Payment error response:', error.response?.data);
+      console.error("Payment error:", error);
+      console.error("Payment error response:", error.response?.data);
       toast.dismiss();
-      toast.error('Payment processing failed');
+      toast.error("Payment processing failed");
     }
   };
 
@@ -363,7 +370,9 @@ const Checkout = () => {
                     type="text"
                     placeholder="Full Name"
                     value={orderData.guestInfo.name}
-                    onChange={(e) => handleInputChange('guestInfo.name', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("guestInfo.name", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required
                   />
@@ -371,7 +380,9 @@ const Checkout = () => {
                     type="tel"
                     placeholder="Phone Number"
                     value={orderData.guestInfo.phone}
-                    onChange={(e) => handleInputChange('guestInfo.phone', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("guestInfo.phone", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     required
                   />
@@ -379,7 +390,9 @@ const Checkout = () => {
                     type="email"
                     placeholder="Email (optional)"
                     value={orderData.guestInfo.email}
-                    onChange={(e) => handleInputChange('guestInfo.email', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("guestInfo.email", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -395,8 +408,10 @@ const Checkout = () => {
                     type="radio"
                     name="orderType"
                     value="pickup"
-                    checked={orderData.orderType === 'pickup'}
-                    onChange={(e) => handleInputChange('orderType', e.target.value)}
+                    checked={orderData.orderType === "pickup"}
+                    onChange={(e) =>
+                      handleInputChange("orderType", e.target.value)
+                    }
                     className="text-green-600"
                   />
                   <span className="ml-2">Pickup from Counter</span>
@@ -406,21 +421,25 @@ const Checkout = () => {
                     type="radio"
                     name="orderType"
                     value="dine-in"
-                    checked={orderData.orderType === 'dine-in'}
-                    onChange={(e) => handleInputChange('orderType', e.target.value)}
+                    checked={orderData.orderType === "dine-in"}
+                    onChange={(e) =>
+                      handleInputChange("orderType", e.target.value)
+                    }
                     className="text-green-600"
                   />
                   <span className="ml-2">Dine In</span>
                 </label>
               </div>
-              
-              {orderData.orderType === 'dine-in' && (
+
+              {orderData.orderType === "dine-in" && (
                 <div className="mt-4">
                   <input
                     type="text"
                     placeholder="Table Number"
                     value={orderData.tableNumber}
-                    onChange={(e) => handleInputChange('tableNumber', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("tableNumber", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -436,21 +455,25 @@ const Checkout = () => {
                     type="radio"
                     name="paymentMethod"
                     value="upi"
-                    checked={orderData.paymentMethod === 'upi'}
-                    onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                    checked={orderData.paymentMethod === "upi"}
+                    onChange={(e) =>
+                      handleInputChange("paymentMethod", e.target.value)
+                    }
                     className="text-green-600"
                   />
                   <Smartphone className="ml-2 mr-3 h-5 w-5 text-green-600" />
                   <span>UPI / Digital Payment</span>
                 </label>
-                
+
                 <label className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                   <input
                     type="radio"
                     name="paymentMethod"
                     value="cash"
-                    checked={orderData.paymentMethod === 'cash'}
-                    onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                    checked={orderData.paymentMethod === "cash"}
+                    onChange={(e) =>
+                      handleInputChange("paymentMethod", e.target.value)
+                    }
                     className="text-green-600"
                   />
                   <Banknote className="ml-2 mr-3 h-5 w-5 text-green-600" />
@@ -463,26 +486,36 @@ const Checkout = () => {
           {/* Order Summary */}
           <div className="bg-white rounded-lg shadow-sm p-6 h-fit sticky top-24">
             <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-            
+
             <div className="space-y-3 mb-4">
               {cartItems.map((item, index) => (
                 <div key={index} className="flex justify-between items-start">
                   <div className="flex-1">
-                    <span className="text-sm font-medium">{item.item.name}</span>
-                    <span className="text-xs text-gray-500 ml-2">x{item.quantity}</span>
+                    <span className="text-sm font-medium">
+                      {item.item.name}
+                    </span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      x{item.quantity}
+                    </span>
                     {Object.keys(item.customizations || {}).length > 0 && (
                       <div className="text-xs text-gray-500 mt-1">
-                        {Object.entries(item.customizations).map(([key, value]) => (
-                          <span key={key} className="block">{key}: {value}</span>
-                        ))}
+                        {Object.entries(item.customizations).map(
+                          ([key, value]) => (
+                            <span key={key} className="block">
+                              {key}: {value}
+                            </span>
+                          )
+                        )}
                       </div>
                     )}
                   </div>
-                  <span className="text-sm">₹{(item.price * item.quantity).toFixed(2)}</span>
+                  <span className="text-sm">
+                    ₹{(item.price * item.quantity).toFixed(2)}
+                  </span>
                 </div>
               ))}
             </div>
-            
+
             <div className="border-t border-gray-200 pt-4 space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal</span>
@@ -497,19 +530,21 @@ const Checkout = () => {
                 <span className="text-green-600">₹{total.toFixed(2)}</span>
               </div>
             </div>
-            
+
             <button
               onClick={handlePlaceOrder}
               disabled={loading}
               className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Placing Order...' : `Place Order (₹${total.toFixed(2)})`}
+              {loading
+                ? "Placing Order..."
+                : `Place Order (₹${total.toFixed(2)})`}
             </button>
-            
+
             {isAuthenticated && (
               <div className="mt-4 text-center">
                 <button
-                  onClick={() => navigate('/my-orders')}
+                  onClick={() => navigate("/my-orders")}
                   className="text-green-600 hover:text-green-700 text-sm font-medium"
                 >
                   View My Orders →
