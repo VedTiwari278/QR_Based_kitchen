@@ -26,7 +26,12 @@ const app = express();
 
 // ------------------ CORS ------------------
 const cors = Cors({
-  origin: ["http://localhost:5173", "https://qr-based-kitchen-2ad9.vercel.app"],
+  origin: [
+    "http://localhost:5173",
+    "https://qr-based-kitchen-2ad9.vercel.app",
+
+    "https://campuscraving.vercel.app",
+  ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
 });
