@@ -1,10 +1,8 @@
 import express from "express";
-import cors from "cors";
+import Cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import path from "path";
-import http from "http";
-import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 
@@ -17,7 +15,7 @@ import menuRoutes from "./routes/menu.js";
 import orderRoutes from "./routes/order.js";
 import adminRoutes from "./routes/admin.js";
 import paymentRoutes from "./routes/payment.js";
-import feedbackRoutes from "./routes/feedback.js"; // ADD .js EXTENSION
+import feedbackRoutes from "./routes/feedback.js";
 
 dotenv.config();
 
@@ -25,73 +23,37 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://qr-based-kitchen-2ad9.vercel.app",
-    ],
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
+// ------------------ CORS ------------------
+const cors = Cors({
+  origin: ["http://localhost:5173", "https://qr-based-kitchen-2ad9.vercel.app"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
 });
+
+// Helper to use middleware in serverless functions
+function runMiddleware(req, res, fn) {
+  return new Promise((resolve, reject) => {
+    fn(req, res, (result) => {
+      if (result instanceof Error) return reject(result);
+      return resolve(result);
+    });
+  });
+}
 
 // Middleware
-app.use(cors());
 app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.json({ message: "Server Started", Status: 200 });
-});
-
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Socket.IO connection
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
-  socket.on("join-admin", () => {
-    socket.join("admin-room");
-  });
-
-  socket.on("join-order", (orderId) => {
-    socket.join(`order-${orderId}`);
-    console.log(`User joined order room: order-${orderId}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
-});
-
-// Make io accessible to routes
-app.use((req, res, next) => {
-  req.io = io;
+// ------------------ Routes ------------------
+// Wrap routes in CORS middleware
+app.use(async (req, res, next) => {
+  await runMiddleware(req, res, cors);
+  if (req.method === "OPTIONS") return res.status(200).end();
   next();
 });
 
-// Database connection
-mongoose
-  .connect(
-    process.env.MONGODB_URI || "mongodb://localhost:27017/qr-food-ordering",
-    {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    }
-  )
-  .then(() => {
-    console.log("Connected to MongoDB");
-  })
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
-  });
-
-CronService.init();
-
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
@@ -104,16 +66,27 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
-// Simple order automation (remove if OrderAutomationService doesn't exist)
-setInterval(() => {
-  // Basic order status updates
-  console.log("Order automation running...");
-}, 60000);
-
-const PORT = process.env.PORT || 5000;
-
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.get("/", (req, res) => {
+  res.json({ message: "Server Started", Status: 200 });
 });
 
-export { app, io };
+// ------------------ MongoDB ------------------
+mongoose
+  .connect(
+    process.env.MONGODB_URI || "mongodb://localhost:27017/qr-food-ordering",
+    {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    }
+  )
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// ------------------ Cron Service ------------------
+CronService.init();
+
+// ------------------ Export for Vercel ------------------
+export default async function handler(req, res) {
+  await runMiddleware(req, res, cors);
+  app(req, res);
+}
